@@ -89,6 +89,40 @@ export class KeyHandler {
     });
   }
   
+  private isPrintableKey(key: { 
+    name: string; 
+    ctrl: boolean; 
+    meta: boolean;
+    sequence: string;
+  }): boolean {
+    // Don't process if ctrl or meta is held
+    if (key.ctrl || key.meta) return false;
+    
+    // Check for backspace/delete sequences
+    if (key.sequence === "\x7f" || key.sequence === "\b") return false;
+    
+    // Check if it's a special key name we should ignore (case-insensitive)
+    const specialKeys = new Set([
+      "escape", "enter", "return", "tab", "backspace", "delete",
+      "arrowup", "arrowdown", "arrowleft", "arrowright",
+      "home", "end", "pageup", "pagedown",
+      "insert", "f1", "f2", "f3", "f4", "f5", "f6",
+      "f7", "f8", "f9", "f10", "f11", "f12",
+    ]);
+    
+    if (key.name && specialKeys.has(key.name.toLowerCase())) return false;
+    
+    // Check if sequence is a single printable character
+    const seq = key.sequence ?? key.name;
+    if (seq && seq.length === 1) {
+      const code = seq.charCodeAt(0);
+      // Printable ASCII range (space to tilde), exclude DEL (127) and control chars
+      return code >= 32 && code < 127;
+    }
+    
+    return false;
+  }
+  
   private handleKey(key: { 
     name: string; 
     ctrl: boolean; 
@@ -99,6 +133,23 @@ export class KeyHandler {
     const s = this.state.getState();
     
     if (s.inputDialog) {
+      const keyLower = key.name?.toLowerCase();
+      if (key.name === "Escape" || keyLower === "escape") {
+        s.inputDialog.onCancel();
+        this.state.hideInputDialog();
+      } else if (key.name === "Enter" || keyLower === "enter" || keyLower === "return") {
+        s.inputDialog.onSubmit(s.inputDialog.currentValue);
+      } else if (keyLower === "backspace" || keyLower === "delete" || key.sequence === "\x7f" || key.sequence === "\b") {
+        const value = s.inputDialog.currentValue;
+        if (value.length > 0) {
+          this.state.updateInputDialogValue(value.slice(0, -1));
+        }
+      } else if (this.isPrintableKey(key)) {
+        const char = key.sequence ?? key.name;
+        if (char && char.length === 1) {
+          this.state.updateInputDialogValue(s.inputDialog.currentValue + char);
+        }
+      }
       return;
     }
     
@@ -121,13 +172,24 @@ export class KeyHandler {
     }
     
     if (s.isSearching) {
-      if (key.name === "Escape") {
+      const keyLower = key.name?.toLowerCase();
+      if (key.name === "Escape" || keyLower === "escape") {
         this.state.endSearch();
         this.state.setSearchQuery("");
         this.state.setFocusedPane("tile");
-      } else if (key.name === "Enter") {
+      } else if (key.name === "Enter" || keyLower === "enter" || keyLower === "return") {
         this.state.endSearch();
         this.state.setFocusedPane("tile");
+      } else if (keyLower === "backspace" || keyLower === "delete" || key.sequence === "\x7f" || key.sequence === "\b") {
+        const query = s.searchQuery;
+        if (query.length > 0) {
+          this.state.setSearchQuery(query.slice(0, -1));
+        }
+      } else if (this.isPrintableKey(key)) {
+        const char = key.sequence ?? key.name;
+        if (char && char.length === 1) {
+          this.state.setSearchQuery(s.searchQuery + char);
+        }
       }
       return;
     }

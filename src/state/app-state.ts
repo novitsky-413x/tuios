@@ -65,6 +65,7 @@ export interface InputDialog {
   title: string;
   placeholder: string;
   initialValue: string;
+  currentValue: string;
   onSubmit: (value: string) => void;
   onCancel: () => void;
 }
@@ -335,8 +336,24 @@ export class StateManager {
     this.update({ confirmDialog: null });
   }
   
-  showInputDialog(dialog: InputDialog): void {
-    this.update({ inputDialog: dialog });
+  showInputDialog(dialog: Omit<InputDialog, "currentValue">): void {
+    this.update({ 
+      inputDialog: {
+        ...dialog,
+        currentValue: dialog.initialValue,
+      }
+    });
+  }
+  
+  updateInputDialogValue(value: string): void {
+    if (this.state.inputDialog) {
+      this.update({
+        inputDialog: {
+          ...this.state.inputDialog,
+          currentValue: value,
+        }
+      });
+    }
   }
   
   hideInputDialog(): void {

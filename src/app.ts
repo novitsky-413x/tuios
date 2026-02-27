@@ -31,6 +31,7 @@ export class App {
   private treeContents: Map<string, { name: string; path: string; isDirectory: boolean }[]> = new Map();
   private mainContainer: BoxRenderable | null = null;
   private isRendering = false;
+  private isDestroyed = false;
   
   constructor(renderer: CliRenderer, config: TuiosConfig, initialPath: string) {
     this.renderer = renderer;
@@ -40,6 +41,10 @@ export class App {
       renderer,
       () => this.refresh()
     );
+    
+    this.renderer.on("destroy", () => {
+      this.isDestroyed = true;
+    });
   }
   
   async start(): Promise<void> {
@@ -59,18 +64,27 @@ export class App {
     await this.refresh();
   }
   
-  private renderQueued = false;
+  private renderTimeout: ReturnType<typeof setTimeout> | null = null;
   
   private scheduleRender(): void {
-    if (this.renderQueued) return;
-    this.renderQueued = true;
-    queueMicrotask(() => {
-      this.renderQueued = false;
-      this.render();
-    });
+    if (this.isDestroyed) return;
+    
+    // Debounce rapid updates (like typing) to reduce flicker
+    if (this.renderTimeout) {
+      clearTimeout(this.renderTimeout);
+    }
+    
+    this.renderTimeout = setTimeout(() => {
+      this.renderTimeout = null;
+      if (!this.isDestroyed) {
+        this.render();
+      }
+    }, 16); // ~60fps max
   }
   
   async refresh(): Promise<void> {
+    if (this.isDestroyed) return;
+    
     const s = this.state.getState();
     this.state.setLoading(true);
     
@@ -86,7 +100,9 @@ export class App {
       this.state.setError(String(error));
     }
     
-    this.render();
+    if (!this.isDestroyed) {
+      this.render();
+    }
   }
   
   private async loadTreeContents(
@@ -129,7 +145,7 @@ export class App {
   }
   
   private render(): void {
-    if (this.isRendering) return;
+    if (this.isRendering || this.isDestroyed) return;
     this.isRendering = true;
     
     try {
@@ -226,7 +242,7 @@ export class App {
             InputDialogComponent(
               s.inputDialog.title,
               s.inputDialog.placeholder,
-              s.inputDialog.initialValue,
+              s.inputDialog.currentValue,
               50
             )
           )

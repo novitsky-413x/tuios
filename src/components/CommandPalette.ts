@@ -1,4 +1,4 @@
-import { Box, Text, Input } from "@opentui/core";
+import { Box, Text } from "@opentui/core";
 
 export function SearchBar(
   searchQuery: string,
@@ -9,10 +9,13 @@ export function SearchBar(
     return Box({ width: 0, height: 0 });
   }
   
+  const displayText = searchQuery || "Type to filter...";
+  const textColor = searchQuery ? "#cdd6f4" : "#6c7086";
+  
   return Box(
     {
       width,
-      height: 3,
+      height: 4,
       position: "absolute",
       top: 3,
       left: Math.floor((100 - width) / 2),
@@ -20,29 +23,38 @@ export function SearchBar(
       borderColor: "#89b4fa",
       backgroundColor: "#1e1e2e",
       padding: 1,
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: "column",
+      gap: 1,
     },
-    Text({ content: "/ ", fg: "#89b4fa" }),
-    Input({
-      id: "search-input",
-      placeholder: "Filter files...",
-      value: searchQuery,
-      width: width - 6,
-      backgroundColor: "#313244",
-      focusedBackgroundColor: "#45475a",
-      textColor: "#cdd6f4",
-      cursorColor: "#89b4fa",
-    }),
+    Box(
+      {
+        flexDirection: "row",
+        alignItems: "center",
+      },
+      Text({ content: "/ ", fg: "#89b4fa" }),
+      Box(
+        {
+          width: width - 8,
+          height: 1,
+          backgroundColor: "#313244",
+          paddingX: 1,
+        },
+        Text({ content: displayText + "▎", fg: textColor }),
+      ),
+    ),
+    Text({ content: "Enter: apply filter  Esc: clear & close", fg: "#6c7086" }),
   );
 }
 
 export function InputDialog(
   title: string,
   placeholder: string,
-  initialValue: string,
+  currentValue: string,
   width: number
 ) {
+  const displayText = currentValue || placeholder;
+  const textColor = currentValue ? "#cdd6f4" : "#6c7086";
+  
   return Box(
     {
       width,
@@ -58,16 +70,16 @@ export function InputDialog(
       gap: 1,
     },
     Text({ content: title, fg: "#cdd6f4" }),
-    Input({
-      id: "dialog-input",
-      placeholder,
-      value: initialValue,
-      width: width - 4,
-      backgroundColor: "#313244",
-      focusedBackgroundColor: "#45475a",
-      textColor: "#cdd6f4",
-      cursorColor: "#89b4fa",
-    }),
+    Box(
+      {
+        width: width - 4,
+        height: 1,
+        backgroundColor: "#313244",
+        paddingX: 1,
+      },
+      Text({ content: displayText + "▎", fg: textColor }),
+    ),
+    Text({ content: "Enter: confirm  Esc: cancel", fg: "#6c7086" }),
   );
 }
 
